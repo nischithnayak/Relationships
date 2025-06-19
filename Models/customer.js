@@ -7,8 +7,11 @@ main()
 
 async function main() {
   await mongoose.connect('mongodb://127.0.0.1:27017/relationships');
-  await addCustomer();      // Add a customer with orders
-  await findCustomer();     // Fetch customers with populated orders
+
+  await addCustomer();     // Add John Doe with Pizza & Burger
+  await addCust();         // Add Jane Smith with Pasta
+  await findCustomer();    // View all customers
+  await delCust();         // Delete a customer by ID
 }
 
 const orderSchema = new Schema({
@@ -32,17 +35,47 @@ const addCustomer = async () => {
     name: 'John Doe',
   });
 
-  let order1 = await Order.findOne({ item: 'Pizza' });
-  let order2 = await Order.findOne({ item: 'Burger' });
+  let order1 = await Order.findOne({ item: 'Pizza' }) || await Order.create({ item: 'Pizza', price: 10 });
+  let order2 = await Order.findOne({ item: 'Burger' }) || await Order.create({ item: 'Burger', price: 8 });
 
-  if (order1) cust1.orders.push(order1._id);
-  if (order2) cust1.orders.push(order2._id);
+  cust1.orders.push(order1._id, order2._id);
 
   let result = await cust1.save();
   console.log("Saved customer:", result);
 };
 
+const addCust = async () => {
+  let newOrder = new Order({
+    item: 'Pasta',
+    price: 12.99
+  });
+  await newOrder.save();
+
+  let newCust = new Customer({
+    name: 'Jane Smith',
+    orders: [newOrder._id]
+  });
+
+  await newCust.save();
+  console.log("Added new customer with order:", newCust);
+};
+
 const findCustomer = async () => {
   let result = await Customer.find({}).populate('orders');
   console.log("Customers with orders:", result);
+};
+
+const delCust = async () => {
+  // Use a valid ID from your DB; replace the below dummy ID
+  const idToDelete = '60c72b2f9b1d8c001c8e4f1a'; // Replace with actual ObjectId
+  try {
+    let data = await Customer.findByIdAndDelete(idToDelete);
+    if (data) {
+      console.log("Deleted customer:", data);
+    } else {
+      console.log("No customer found with that ID.");
+    }
+  } catch (err) {
+    console.error("Error deleting customer:", err.message);
+  }
 };
